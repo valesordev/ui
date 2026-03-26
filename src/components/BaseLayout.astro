@@ -1,0 +1,24 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+  favicon?: string;
+}
+
+const { title, description, favicon = '/favicon.svg' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    {description && <meta name="description" content={description} />}
+    <title>{title}</title>
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+    <slot name="head" />
+  </head>
+  <body class="antialiased">
+    <slot />
+  </body>
+</html>
