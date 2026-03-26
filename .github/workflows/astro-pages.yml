@@ -8,6 +8,10 @@ on:
         type: string
         default: '22'
         required: false
+    secrets:
+      NODE_AUTH_TOKEN:
+        description: Token for GitHub Packages registry (pass secrets.GITHUB_TOKEN from caller)
+        required: true
 
 permissions:
   contents: read
@@ -27,7 +31,11 @@ jobs:
         with:
           node-version: ${{ inputs.node-version }}
           cache: npm
+          registry-url: https://npm.pkg.github.com
+          scope: '@valesordev'
       - run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:
