@@ -27,13 +27,17 @@ on:
         required: false
     secrets:
       NODE_AUTH_TOKEN:
-        description: Token for GitHub Packages registry (pass secrets.GITHUB_TOKEN from caller)
-        required: true
+        description: >-
+          Optional token for the GitHub Packages registry. Falls back to the
+          run's own GITHUB_TOKEN, which is enough for a public package. Callers
+          only need to pass one for a private package.
+        required: false
 
 permissions:
   contents: read
   pages: write
   id-token: write
+  packages: read
 
 concurrency:
   group: pages
@@ -49,9 +53,14 @@ jobs:
           node-version: ${{ inputs.node-version }}
           registry-url: https://npm.pkg.github.com
           scope: '@valesordev'
+      # setup-node writes //npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}, so an
+      # unset secret sends an EMPTY token — which GitHub Packages rejects with 401
+      # even for a public package, where sending no token at all would succeed.
+      # Falling back to the run's GITHUB_TOKEN avoids that: it is always present,
+      # needs no PAT to rotate, and reads public packages fine.
       - run: npm install
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN || github.token }}
       - run: npm run build
         env:
           # Absent or empty config makes the site's Faro init a graceful no-op,
