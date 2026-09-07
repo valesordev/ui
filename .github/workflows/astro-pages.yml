@@ -8,6 +8,23 @@ on:
         type: string
         default: '22'
         required: false
+      faro-apps:
+        description: >-
+          JSON map of hostname -> Grafana Faro app key, e.g.
+          {"example.com":"abc...","example.solo7.valesordev.com":"def..."}.
+          One build serves both GitHub Pages and the local cluster, and each has
+          its own Faro app with CORS locked to its own origin, so the site picks
+          the key at runtime by hostname. App keys ship to the browser and are
+          not secrets, so this is an input rather than a secret — but callers
+          should still pass it from a repo variable to keep keys out of source.
+        type: string
+        default: ''
+        required: false
+      faro-endpoint:
+        description: Grafana Cloud Frontend Observability collector URL.
+        type: string
+        default: https://faro-collector-prod-us-central-0.grafana.net/collect
+        required: false
     secrets:
       NODE_AUTH_TOKEN:
         description: Token for GitHub Packages registry (pass secrets.GITHUB_TOKEN from caller)
@@ -36,6 +53,12 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
       - run: npm run build
+        env:
+          # Absent or empty config makes the site's Faro init a graceful no-op,
+          # so an un-migrated caller still builds and deploys fine.
+          PUBLIC_FARO_APPS: ${{ inputs.faro-apps }}
+          PUBLIC_FARO_ENDPOINT: ${{ inputs.faro-endpoint }}
+          PUBLIC_FARO_APP_VERSION: ${{ github.sha }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist/
