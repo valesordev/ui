@@ -48,19 +48,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Deliberately no `registry-url`/`scope`. Those make setup-node write
+      # //npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN} into ~/.npmrc, which
+      # forces every request to the registry to carry a token — and GitHub
+      # Packages rejects a token that lacks access to the package with 401 even
+      # when the package is public. An unset secret sends an empty token; the
+      # run's own GITHUB_TOKEN belongs to the consumer repo and has no grant on
+      # valesordev/ui. Both 401.
+      #
+      # @valesordev/ui is public, and a public GitHub Packages npm package
+      # downloads anonymously. Each consumer repo already has a committed
+      # .npmrc mapping the @valesordev scope to the registry, which is all that
+      # is needed. Sending no credentials is what actually works here.
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ inputs.node-version }}
-          registry-url: https://npm.pkg.github.com
-          scope: '@valesordev'
-      # setup-node writes //npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}, so an
-      # unset secret sends an EMPTY token — which GitHub Packages rejects with 401
-      # even for a public package, where sending no token at all would succeed.
-      # Falling back to the run's GITHUB_TOKEN avoids that: it is always present,
-      # needs no PAT to rotate, and reads public packages fine.
       - run: npm install
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN || github.token }}
       - run: npm run build
         env:
           # Absent or empty config makes the site's Faro init a graceful no-op,
